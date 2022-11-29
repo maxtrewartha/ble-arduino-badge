@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Arduino BLE Editor</title>
+    </head>
+
+    <body>
+        <label for="name">Bluetooth Device Name</label>
+        <input id="name" type="text" size="17" placeholder="Device Name">
+        <button type="button" id="the_button">Get Bluetooth Device</button>
+        <br><br>
+        <button type="button" id="send_zero">Send 0 to device</button>
+        <button type="button" id="send_one">Send 1 to device</button>
+
+        <p id="data"></p>
+
+        <script src="https://code.jquery.com/jquery-3.6.1.slim.min.js" integrity="sha256-w8CvhFs7iHNVUtnSP0YKEg00p9Ih13rlL9zGqvLdePA=" crossorigin="anonymous"></script>
+        <script>
+            var characteristic;
+
+            $("#send_zero").click(async () => {
+                await characteristic.writeValue(new Int8Array([0]))
+                log(`> Zero value sent to device`);
+            });
+
+            $("#send_one").click(async () => {
+                await characteristic.writeValue(new Int8Array([1]))
+                log(`> One value sent to device`);
+
+            });
+
+            $("#the_button").click(() => {
+                onButtonClick();
+            });
+
+            function log(data) {
+                document.getElementById("data").innerHTML += `${data}<br>`
+            }
+
+            async function onButtonClick() {
+                let filters = [];
+                let serviceUuid = "45cc5a3e-c190-46b9-9580-028373365565";
+                let characteristicUuid = "45cc5a3e-c190-46b9-9580-028373365565";
+
+                let filterName = document.querySelector('#name').value;
+                if (filterName) {
+                    filters.push({ name: filterName });
+                }
+
+                let options = { filters: filters };
+                options.optionalServices = [serviceUuid];
+
+                if (navigator.bluetooth == undefined) {
+                    log(`navigator.bluetooth is undefined. Please make sure you are using a secure connection. You may need to have experimental web platform features and new permissions backend for bluetooth enabled too.`);
+                    return;
+                }
+
+
+                try {
+                    log('Requesting Bluetooth Device...');
+                    log('with ' + JSON.stringify(options));
+                    const device = await navigator.bluetooth.requestDevice(options);
+
+                    log('> Name:             ' + device.name);
+                    log('> Id:               ' + device.id);
+                    log('> Connected:        ' + device.gatt.connected);
+
+                    log('Connecting to GATT Server...');
+                    const server = await device.gatt.connect();
+
+                    log('Getting Service...');
+
+                    const service = await server.getPrimaryService(serviceUuid);
+
+                    log('Getting Characteristic...');
+                    characteristic = await service.getCharacteristic(characteristicUuid);
+
+                    log('> Characteristic UUID:  ' + characteristic.uuid);
+                    log('> Broadcast:            ' + characteristic.properties.broadcast);
+                    log('> Read:                 ' + characteristic.properties.read);
+                    log('> Write w/o response:   ' +
+                        characteristic.properties.writeWithoutResponse);
+                    log('> Write:                ' + characteristic.properties.write);
+                    log('> Notify:               ' + characteristic.properties.notify);
+                    log('> Indicate:             ' + characteristic.properties.indicate);
+                    log('> Signed Write:         ' +
+                        characteristic.properties.authenticatedSignedWrites);
+                    log('> Queued Write:         ' + characteristic.properties.reliableWrite);
+                    log('> Writable Auxiliaries: ' +
+                        characteristic.properties.writableAuxiliaries);
+                } catch (error) {
+                    log('Argh! ' + error);
+                }
+            }
+
+            /* Utils */
+
+            const logDataView = (labelOfDataSource, key, valueDataView) => {
+                const hexString = [...new Uint8Array(valueDataView.buffer)].map(b => {
+                    return b.toString(16).padStart(2, '0');
+                }).join(' ');
+                const textDecoder = new TextDecoder('ascii');
+                const asciiString = textDecoder.decode(valueDataView.buffer);
+                log(`  ${labelOfDataSource} Data: ` + key +
+                    '\n    (Hex) ' + hexString +
+                    '\n    (ASCII) ' + asciiString);
+            };</script>
+    </body>
+
+</html>
