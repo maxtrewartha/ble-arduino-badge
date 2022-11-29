@@ -1,15 +1,18 @@
 #include <ArduinoBLE.h>
+#define REQUIRE_SERIAL
 
 BLEService ledService("45cc5a3e-c190-46b9-9580-028373365565"); // Bluetooth® Low Energy LED Service
 
 // Bluetooth® Low Energy LED Switch Characteristic - custom 128-bit UUID, read and writable by central
-BLEByteCharacteristic switchCharacteristic("45cc5a3e-c190-46b9-9580-028373365565", BLERead | BLEWrite);
+BLEStringCharacteristic switchCharacteristic("45cc5a3e-c190-46b9-9580-028373365565", BLERead | BLEWrite, 16);
 
 const int ledPin = LED_BUILTIN; // pin to use for the LED
 
 void setup() {
   Serial.begin(9600);
+  #ifdef REQUIRE_SERIAL
   while (!Serial);
+  #endif
 
   // set LED pin to output mode
   pinMode(ledPin, OUTPUT);
@@ -32,12 +35,12 @@ void setup() {
   BLE.addService(ledService);
 
   // set the initial value for the characeristic:
-  switchCharacteristic.writeValue(0);
+  switchCharacteristic.writeValue("Hello.");
 
   // start advertising
   BLE.advertise();
 
-  Serial.println("BLE LED Peripheral");
+  Serial.println("BLE Buffer Test");
 }
 
 void loop() {
@@ -55,12 +58,11 @@ void loop() {
       // if the remote device wrote to the characteristic,
       // use the value to control the LED:
       if (switchCharacteristic.written()) {
-        if (switchCharacteristic.value()) {   // any value other than 0
-          Serial.println("LED on");
-          digitalWrite(ledPin, HIGH);         // will turn the LED on
+        if (switchCharacteristic.value()) {
+          Serial.print("> Received data: ");
+          Serial.println(switchCharacteristic.value());
         } else {                              // a 0 value
-          Serial.println(F("LED off"));
-          digitalWrite(ledPin, LOW);          // will turn the LED off
+          Serial.println("> No Data");
         }
       }
     }

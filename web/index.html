@@ -15,12 +15,29 @@
         <br><br>
         <button type="button" id="send_zero">Send 0 to device</button>
         <button type="button" id="send_one">Send 1 to device</button>
+        <br><br>
+        <label for="buffer">Send Buffer</label>
+        <input id="buffer" type="text" size="17" placeholder="Data">
+        <button type="button" id="send_buffer">Send data</button>
 
         <p id="data"></p>
 
         <script src="https://code.jquery.com/jquery-3.6.1.slim.min.js" integrity="sha256-w8CvhFs7iHNVUtnSP0YKEg00p9Ih13rlL9zGqvLdePA=" crossorigin="anonymous"></script>
         <script>
+            /* A script to force https */
+            if (location.protocol !== 'https:') {
+                location.replace(`https:${location.href.substring(location.protocol.length)}`);
+            }
+
+            const encoder = new TextEncoder();
             var characteristic;
+
+            $("#send_buffer").click(async () => {
+                let bufferVal = await $("#buffer").val();
+                let encoded = encoder.encode(bufferVal);
+                await characteristic.writeValue(new Int8Array(encoded));
+                log(`> Sending value ${bufferVal} to device.`);
+            })
 
             $("#send_zero").click(async () => {
                 await characteristic.writeValue(new Int8Array([0]))
@@ -42,6 +59,7 @@
             }
 
             async function onButtonClick() {
+                $("#data").empty();
                 let filters = [];
                 let serviceUuid = "45cc5a3e-c190-46b9-9580-028373365565";
                 let characteristicUuid = "45cc5a3e-c190-46b9-9580-028373365565";
@@ -58,7 +76,6 @@
                     log(`navigator.bluetooth is undefined. Please make sure you are using a secure connection. You may need to have experimental web platform features and new permissions backend for bluetooth enabled too.`);
                     return;
                 }
-
 
                 try {
                     log('Requesting Bluetooth Device...');
